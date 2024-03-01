@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.NotificationHubs;
+using POC_Notifications_new.Models;
 using POC_Notifications_new.Services;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -11,50 +13,55 @@ namespace POC_Notifications_new.Controllers
     {
         ANHService _anh = new ANHService();
         [HttpGet]
-        public void GetAll()
+        async public Task<List<RegistrationInfo>> GetAll()
         {
-            _anh.GetAllClients();
+            var result = await _anh.GetAllClients();
+            return result;
         }
 
         [HttpGet("{tagName}")]
-        public void GetByTagName(string tagName)
+        async public Task<List<RegistrationInfo>> GetByTagName(string tagName)
         {
-            _anh.GetDeviceByTagName(tagName);
+            var result = await _anh.GetDeviceByTagName(tagName);
+            return result;
         }
 
         [HttpPost]
         [Route("RegisterDevice")]
-        public object PostDevice(string FCM, string tagName)
+        async public Task<RegistrationDescription> PostDevice([FromBody] DeviceModel model)
         {
-            _anh.RegisterDevice(FCM, tagName);
-            return new { status = "success" };
+            var result = await _anh.RegisterDevice(model.FCM, model.TagName);
+            return result;
         }
 
         [HttpPost]
-        [Route("SendNotification")]
-        public void PostNotification(string tagName)
+        [Route("SendNotification/{tagName}")]
+        async public Task<NotificationOutcome> PostNotification(string tagName)
         {
-            _anh.SendPushNotification(tagName);
-            //return new { status = "success" };
+            var result = await _anh.SendPushNotification(tagName);
+            return result;
         }
 
         [HttpPut]
-        public void Put(string tagName, string newFCM)
+        async public Task<List<RegistrationInfo>> Put([FromBody] DeviceModel model)
         {
-            _anh.UpdateDeviceTokenByTag(tagName, newFCM);
+            var result = await _anh.UpdateDeviceTokenByTag(model.TagName, model.FCM);
+            return result;
         }
 
         [HttpDelete()]
-        public void Delete()
+        async public Task<object> Delete()
         {
-            _anh.ClearAllDevices();
+            var result = await _anh.ClearAllDevices();
+            return result;
         }
 
         [HttpDelete()]
         [Route("NoTags")]
-        public void DeleteNoTags()
+        async public Task<object> DeleteNoTags()
         {
-            _anh.ClearAllDevicesWithNoTags();
+            var result = await _anh.ClearAllDevicesWithNoTags();
+            return result;
         }
     }
 }

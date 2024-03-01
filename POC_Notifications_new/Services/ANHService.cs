@@ -1,4 +1,6 @@
 ﻿using Microsoft.Azure.NotificationHubs;
+using Newtonsoft.Json;
+using POC_Notifications_new.Models;
 
 namespace POC_Notifications_new.Services
 {
@@ -12,14 +14,14 @@ namespace POC_Notifications_new.Services
             "ntf-pinniesV2-dev");
         }
 
-        async public void RegisterDevice(string FCM, string tagName)
+        async public Task<RegistrationDescription> RegisterDevice(string FCM, string tagName)
         {
             IEnumerable<string> userTags = new List<string>() { tagName };
             RegistrationDescription registration = await hub.CreateFcmNativeRegistrationAsync(FCM, userTags);
-            Console.WriteLine(registration.Tags.First().ToString());
+            return registration;
         }
 
-        async public void SendPushNotification(string tagName)
+        async public Task<NotificationOutcome> SendPushNotification(string tagName)
         {
             IEnumerable<string> userTags = new List<string>() { tagName };
             string notificationPayload = @"
@@ -34,57 +36,57 @@ namespace POC_Notifications_new.Services
 	            }
             }";
             var result = await hub.SendFcmNativeNotificationAsync(notificationPayload, userTags);
+            return result;
         }
 
-        async public void GetAllClients()
+        async public Task<List<RegistrationInfo>> GetAllClients()
         {
             var registrations = await hub.GetAllRegistrationsAsync(int.MaxValue);
+            List<RegistrationInfo> registrationInfoList = new List<RegistrationInfo>();
+
             foreach (var registration in registrations)
             {
-                Console.WriteLine($"RegistrationId: {registration.RegistrationId}");
-                Console.WriteLine($"FCM Token: {registration.PnsHandle}");
-
-                // Display user tags
-                if (registration.Tags != null)
+                var registrationInfo = new RegistrationInfo
                 {
-                    Console.WriteLine("User Tags:");
-                    foreach (var tag in registration.Tags)
-                    {
-                        Console.WriteLine($"  {tag}");
-                    }
-                }
+                    RegistrationId = registration.RegistrationId,
+                    FcmToken = registration.PnsHandle,
+                    UserTags = registration.Tags?.ToList()
+                };
+
+                registrationInfoList.Add(registrationInfo);
             }
+
+            return registrationInfoList;
         }
 
-        async public void GetDeviceByTagName(string tagName)
+        async public Task<List<RegistrationInfo>> GetDeviceByTagName(string tagName)
         {
             var registrations = await hub.GetRegistrationsByTagAsync(tagName, int.MaxValue);
+
+            List<RegistrationInfo> registrationInfoList = new List<RegistrationInfo>();
 
             if (registrations != null && registrations.Any())
             {
                 foreach (var registration in registrations)
                 {
-                    Console.WriteLine($"RegistrationId: {registration.RegistrationId}");
-                    Console.WriteLine($"FCM Token: {registration.PnsHandle}");
-
-                    // Display user tags
-                    if (registration.Tags != null)
+                    var registrationInfo = new RegistrationInfo
                     {
-                        Console.WriteLine("User Tags:");
-                        foreach (var tag in registration.Tags)
-                        {
-                            Console.WriteLine($"  {tag}");
-                        }
-                    }
+                        RegistrationId = registration.RegistrationId,
+                        FcmToken = registration.PnsHandle,
+                        UserTags = registration.Tags?.ToList()
+                    };
+
+                    registrationInfoList.Add(registrationInfo);
                 }
+                return registrationInfoList;
             }
             else
             {
-                Console.WriteLine($"No devices found with tag '{tagName}'.");
+                return null;
             }
         }
 
-        async public void ClearAllDevicesWithNoTags()
+        async public Task<object> ClearAllDevicesWithNoTags()
         {
             var registrations = await hub.GetAllRegistrationsAsync(int.MaxValue);
 
@@ -95,17 +97,18 @@ namespace POC_Notifications_new.Services
                     try
                     {
                         await hub.DeleteRegistrationAsync(registration.RegistrationId);
-                        Console.WriteLine($"Deleted registration with ID: {registration.RegistrationId}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error deleting registration with ID {registration.RegistrationId}: {ex.Message}");
+                        return new { status = "error", exception = ex.Message };
                     }
                 }
             }
+
+            return new { status = "success" };
         }
 
-        async public void ClearAllDevices()
+        async public Task<object> ClearAllDevices()
         {
             var registrations = await hub.GetAllRegistrationsAsync(int.MaxValue);
 
@@ -114,18 +117,21 @@ namespace POC_Notifications_new.Services
                 try
                 {
                     await hub.DeleteRegistrationAsync(registration.RegistrationId);
-                    Console.WriteLine($"Deleted registration with ID: {registration.RegistrationId}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error deleting registration with ID {registration.RegistrationId}: {ex.Message}");
+                    return new { status = "error", exception = ex.Message };
                 }
             }
+
+            return new { status = "success" };
         }
 
-        async public void UpdateDeviceTokenByTag(string tagName, string newFCMToken)
+        async public Task<List<RegistrationInfo>> UpdateDeviceTokenByTag(string tagName, string newFCMToken)
         {
             var registrations = await hub.GetRegistrationsByTagAsync(tagName, int.MaxValue);
+
+            List<RegistrationInfo> updatedRegistrations = new List<RegistrationInfo>();
 
             if (registrations != null && registrations.Any())
             {
@@ -139,8 +145,14 @@ namespace POC_Notifications_new.Services
                         // Delete the old registration
                         await hub.DeleteRegistrationAsync(registration.RegistrationId);
 
-                        Console.WriteLine($"Updated FCM token for device with tag '{tagName}'.");
-                        Console.WriteLine($"New FCM Token: {newFCMToken}");
+                        var updatedRegistrationInfo = new RegistrationInfo
+                        {
+                            RegistrationId = newRegistration.RegistrationId,
+                            FcmToken = newRegistration.PnsHandle,
+                            UserTags = newRegistration.Tags?.ToList()
+                        };
+
+                        updatedRegistrations.Add(updatedRegistrationInfo);
                     }
                     catch (Exception ex)
                     {
@@ -148,10 +160,8 @@ namespace POC_Notifications_new.Services
                     }
                 }
             }
-            else
-            {
-                Console.WriteLine($"No devices found with tag '{tagName}'.");
-            }
+
+            return updatedRegistrations;
         }
 
 
