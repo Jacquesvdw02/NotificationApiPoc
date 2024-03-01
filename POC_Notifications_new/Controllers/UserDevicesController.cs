@@ -32,9 +32,9 @@ namespace POC_Notifications_new.Controllers
 
         [HttpPost]
         [Route("SendNotification")]
-        public void PostNotification()
+        public void PostNotification(string tagName)
         {
-            _anh.SendPushNotification();
+            _anh.SendPushNotification(tagName);
             //return new { status = "success" };
         }
 

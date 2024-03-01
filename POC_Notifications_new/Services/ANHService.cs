@@ -19,9 +19,9 @@ namespace POC_Notifications_new.Services
             Console.WriteLine(registration.Tags.First().ToString());
         }
 
-        async public void SendPushNotification()
+        async public void SendPushNotification(string tagName)
         {
-            IEnumerable<string> userTags = new List<string>() { "defaultUser" };
+            IEnumerable<string> userTags = new List<string>() { tagName };
             string notificationPayload = @"
             {
 	            ""notification"": {
