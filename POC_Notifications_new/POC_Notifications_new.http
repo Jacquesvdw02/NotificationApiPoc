@@ -1,0 +1,6 @@
+@POC_Notifications_new_HostAddress = http://localhost:5195
+
+GET {{POC_Notifications_new_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
